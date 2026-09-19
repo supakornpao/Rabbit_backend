@@ -1,0 +1,23 @@
+# Environments
+venv/
+env/
+.venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Secrets and Configurations (CRITICAL)
+.env
+*.pem
+
+# Database
+*.sqlite3
+*.db
+
+# Testing and IDEs
+.pytest_cache/
+.coverage
+.vscode/
+.idea/

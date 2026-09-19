@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # The PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: fastapi_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: rabbitpodo
+      POSTGRES_DB: fastapi_db
+    ports:
+      # Mapping host port 5433 to container port 5432 
+      # (This avoids clashing with your existing postgres container!)
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # PgAdmin: A visual web UI to manage your PostgreSQL database (Optional but highly recommended)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: fastapi_pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+
+volumes:
+  # This makes sure your database data isn't deleted when the container shuts down
+  postgres_data:
