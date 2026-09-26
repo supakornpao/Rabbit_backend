@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.auth import models
 from app.database import engine
 from app.auth.router import router,get_current_user
-
+from app.rabbits.router import router as rabbit_router
 import os
 from dotenv import load_dotenv
 # Load variables from .env file
@@ -45,6 +45,7 @@ app.add_middleware(
 
 
 app.include_router(router)
+app.include_router(rabbit_router)
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 
@@ -127,5 +128,5 @@ async def prediction(file: UploadFile, current_user: models.User = Depends(get_c
 def greeting():
     return {"message": "Hello World"}
 
-#uvicorn main:app --host 0.0.0.0 --reload
+#uvicorn app.main:app --host 0.0.0.0 --reload
 
