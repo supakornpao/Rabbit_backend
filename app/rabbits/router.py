@@ -32,6 +32,17 @@ def get_rabbits(
 ):
     return db.query(models.Rabbit).filter(models.Rabbit.owner_id == current_user.id).all()
 
+@router.get("/{rabbit_id}",response_model=schemas.Rabbit)
+def get_rabbit_details(
+    rabbit_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: auth_models.User = Depends(get_current_user)
+):
+    db_rabbit = db.query(models.Rabbit).filter(models.Rabbit.id == rabbit_id, models.Rabbit.owner_id == current_user.id).first()
+    if not db_rabbit:
+        raise HTTPException(status_code=404, detail="Rabbit not found")
+    return db_rabbit
+
 @router.put("/{rabbit_id}", response_model=schemas.Rabbit)
 def update_rabbit(
     rabbit_id: UUID,
