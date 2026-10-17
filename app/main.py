@@ -1,8 +1,9 @@
-import uvicorn
-from fastapi import FastAPI,Query, UploadFile, Depends
+from fastapi import FastAPI, Query, UploadFile, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from enum import Enum
 from pydantic import BaseModel
 from typing import Annotated
+import mimetypes
 
 from io import BytesIO
 from PIL import Image
@@ -12,8 +13,9 @@ import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from app.auth import models
 from app.database import engine
-from app.auth.router import router,get_current_user
+from app.auth.router import router, get_current_user
 from app.rabbits.router import router as rabbit_router
+from app.storage import get_file_from_minio, ensure_bucket_exists
 import os
 from dotenv import load_dotenv
 # Load variables from .env file
@@ -46,6 +48,20 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(rabbit_router)
+
+@app.on_event("startup")
+def startup_event():
+    ensure_bucket_exists()
+
+@app.get("/media/{file_path:path}")
+def serve_media(file_path: str):
+    try:
+        response = get_file_from_minio(file_path)
+        content_type, _ = mimetypes.guess_type(file_path)
+        return StreamingResponse(response, media_type=content_type or "application/octet-stream")
+    except Exception:
+        raise HTTPException(status_code=404, detail="Media file not found")
+
 
 fake_items_db = [{"item_name": "Foo"}, {"item_name": "Bar"}, {"item_name": "Baz"}]
 

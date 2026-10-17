@@ -11,5 +11,6 @@ class Rabbit(Base):
     name = Column(String(100), index=True, nullable=False)
     date_of_birth = Column(Date, nullable=False)
     breed = Column(String, nullable=False)
+    image_url = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)  # Store Unix timestamp
     updated_at = Column(DateTime, server_default=func.now(), nullable=False)  # Store Unix timestamp

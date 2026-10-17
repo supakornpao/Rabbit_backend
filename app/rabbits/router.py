@@ -1,11 +1,12 @@
 
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from app.auth.router import get_current_user
 from app.database import get_db
 from app.auth import models as auth_models 
 from app.rabbits import schemas, models
+from app.storage import upload_file_to_minio, delete_file_from_minio
 from sqlalchemy.orm import Session
 from uuid import UUID
 router = APIRouter(prefix="/rabbits", tags=["rabbits"])
@@ -68,6 +69,36 @@ def delete_rabbit(
     db_rabbit = db.query(models.Rabbit).filter(models.Rabbit.id == rabbit_id, models.Rabbit.owner_id == current_user.id).first()
     if not db_rabbit:
         raise HTTPException(status_code=404, detail="Rabbit not found")
+    if db_rabbit.image_url:
+        # e.g., "/media/avatars/..." -> strip "/media/"
+        object_name = db_rabbit.image_url.replace("/media/", "")
+        delete_file_from_minio(object_name)
     db.delete(db_rabbit)
     db.commit()
     return {'message': 'Rabbit deleted successfully'}
+
+@router.post("/{rabbit_id}/photo", response_model=schemas.Rabbit)
+async def upload_rabbit_photo(
+    rabbit_id: UUID,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: auth_models.User = Depends(get_current_user)
+):
+    db_rabbit = db.query(models.Rabbit).filter(
+        models.Rabbit.id == rabbit_id,
+        models.Rabbit.owner_id == current_user.id
+    ).first()
+    if not db_rabbit:
+        raise HTTPException(status_code=404, detail="Rabbit not found")
+
+    file_bytes = await file.read()
+    content_type = file.content_type or "image/jpeg"
+    ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
+
+    object_name = f"avatars/{rabbit_id}.{ext}"
+    media_url = upload_file_to_minio(file_bytes, object_name, content_type=content_type)
+
+    db_rabbit.image_url = media_url
+    db.commit()
+    db.refresh(db_rabbit)
+    return db_rabbit

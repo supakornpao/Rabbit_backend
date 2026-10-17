@@ -6,11 +6,13 @@ class RabbitCreate(BaseModel):
     name: str
     date_of_birth: date
     breed: str
+    image_url: str | None = None
 
 class RabbitUpdate(BaseModel):
     name: str | None = None
     date_of_birth: date | None = None
     breed: str | None = None
+    image_url: str | None = None
 
 class Rabbit(BaseModel):
     id: UUID
@@ -18,6 +20,7 @@ class Rabbit(BaseModel):
     name: str
     date_of_birth: date
     breed: str
+    image_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
