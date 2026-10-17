@@ -5,10 +5,15 @@ class UserBase(BaseModel):
     email: EmailStr
 
 class UserCreate(UserBase):
+    username: str
     password: str
+
+class UserUpdate(BaseModel):
+    username: str
 
 class User(UserBase):
     id: UUID
+    username: str | None = None
     is_active: bool
 
     class Config:

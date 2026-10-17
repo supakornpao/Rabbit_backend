@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # The PostgreSQL Database
   db:
@@ -30,6 +28,19 @@ services:
     depends_on:
       - db
 
+  minio:
+    image: minio/minio
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Web UI Console Port
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_USER}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
 volumes:
   # This makes sure your database data isn't deleted when the container shuts down
   postgres_data:
+  minio_data:
