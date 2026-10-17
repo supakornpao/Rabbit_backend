@@ -15,6 +15,8 @@ from app.auth import models
 from app.database import engine
 from app.auth.router import router, get_current_user
 from app.rabbits.router import router as rabbit_router
+from app.scans.router import router as scans_router
+from app.scans import models as scan_models
 from app.storage import get_file_from_minio, ensure_bucket_exists
 import os
 from dotenv import load_dotenv
@@ -48,6 +50,7 @@ app.add_middleware(
 
 app.include_router(router)
 app.include_router(rabbit_router)
+app.include_router(scans_router)
 
 @app.on_event("startup")
 def startup_event():

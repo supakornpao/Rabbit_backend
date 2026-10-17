@@ -7,10 +7,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "localhost:9000")
-MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER", "admin")
-MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD", "rabbitpic")
+MINIO_ROOT_USER = os.getenv("MINIO_ROOT_USER")
+MINIO_ROOT_PASSWORD = os.getenv("MINIO_ROOT_PASSWORD")
 MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", "rabbit-media")
 MINIO_USE_SSL = os.getenv("MINIO_USE_SSL", "False").lower() in ("true", "1", "t")
+
+if not MINIO_ROOT_USER or not MINIO_ROOT_PASSWORD:
+    raise RuntimeError("MinIO credentials (MINIO_ROOT_USER, MINIO_ROOT_PASSWORD) not found in environment or .env file!")
 
 minio_client = Minio(
     MINIO_ENDPOINT,
