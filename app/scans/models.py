@@ -5,8 +5,6 @@ from sqlalchemy.orm import relationship
 from app.database import Base
 
 class LimbEnum(str, enum.Enum):
-    front_left = "front_left"
-    front_right = "front_right"
     back_left = "back_left"
     back_right = "back_right"
 
@@ -16,7 +14,7 @@ class Photo(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     rabbit_id = Column(UUID(as_uuid=True), ForeignKey("rabbits.id", ondelete="CASCADE"), index=True, nullable=False)
     image_url = Column(String, nullable=False)
-    limb = Column(Enum(LimbEnum), nullable=False, default=LimbEnum.front_left)
+    limb = Column(Enum(LimbEnum), nullable=False, default=LimbEnum.back_left)
     status = Column(String(20), nullable=False, default="analyzed")  # pending, processing, analyzed, failed
     uploaded_at = Column(DateTime, server_default=func.now(), nullable=False)
 

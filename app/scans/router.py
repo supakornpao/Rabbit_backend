@@ -56,7 +56,7 @@ GRADE_DETAILS = {
 @router.post("/", response_model=scan_schemas.ScanResponse)
 async def process_paw_scan(
     rabbit_id: UUID = Form(...),
-    limb: str = Form("front_left"),
+    limb: str = Form("back_left"),
     mock_grade: int | None = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
@@ -79,8 +79,8 @@ async def process_paw_scan(
     media_url = upload_file_to_minio(file_bytes, object_name, content_type=content_type)
 
     # 3. Create Photo record
-    # Validate limb enum or fallback to front_left
-    limb_value = limb if limb in [e.value for e in scan_models.LimbEnum] else scan_models.LimbEnum.front_left.value
+    # Validate limb enum or fallback to back_left
+    limb_value = limb if limb in [e.value for e in scan_models.LimbEnum] else scan_models.LimbEnum.back_left.value
     db_photo = scan_models.Photo(
         id=photo_id,
         rabbit_id=rabbit_id,
@@ -92,7 +92,7 @@ async def process_paw_scan(
     db.commit()
 
     # 4. Generate mock detection result (or use requested mock_grade if provided)
-    chosen_classification = mock_grade if mock_grade is not None and 0 <= mock_grade <= 5 else random.choice([1, 2, 3])
+    chosen_classification = mock_grade if mock_grade is not None and 0 <= mock_grade <= 5 else random.choice([1, 2, 3, 4])
     confidence = round(random.uniform(0.88, 0.98), 2)
 
     db_result = scan_models.DetectionResult(
