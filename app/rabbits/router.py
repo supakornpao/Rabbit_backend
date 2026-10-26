@@ -1,5 +1,3 @@
-
-
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from app.auth.router import get_current_user
@@ -70,9 +68,13 @@ def delete_rabbit(
     if not db_rabbit:
         raise HTTPException(status_code=404, detail="Rabbit not found")
     if db_rabbit.image_url:
-        # e.g., "/media/avatars/..." -> strip "/media/"
-        object_name = db_rabbit.image_url.replace("/media/", "")
+        # e.g., "/media/users/{user_id}/avatars/..." -> strip "/media/"
+        object_name = db_rabbit.image_url.replace("/media/", "", 1)
         delete_file_from_minio(object_name)
+    for photo in getattr(db_rabbit, "photos", []):
+        if photo.image_url:
+            scan_object_name = photo.image_url.replace("/media/", "", 1)
+            delete_file_from_minio(scan_object_name)
     db.delete(db_rabbit)
     db.commit()
     return {'message': 'Rabbit deleted successfully'}
@@ -95,10 +97,15 @@ async def upload_rabbit_photo(
     content_type = file.content_type or "image/jpeg"
     ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
 
-    object_name = f"avatars/{rabbit_id}.{ext}"
+    object_name = f"users/{current_user.id}/avatars/{rabbit_id}.{ext}"
+    old_object_name = db_rabbit.image_url.replace("/media/", "", 1) if db_rabbit.image_url else None
+
     media_url = upload_file_to_minio(file_bytes, object_name, content_type=content_type)
+
+    if old_object_name and old_object_name != object_name:
+        delete_file_from_minio(old_object_name)
 
     db_rabbit.image_url = media_url
     db.commit()
     db.refresh(db_rabbit)
-    return db_rabbit
+    return db_rabbit

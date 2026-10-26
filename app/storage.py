@@ -33,7 +33,8 @@ def ensure_bucket_exists():
 
 def upload_file_to_minio(file_bytes: bytes, object_name: str, content_type: str = "image/jpeg") -> str:
     """
-    Uploads a file to MinIO with a prefix (e.g. avatars/{rabbit_id}.jpg or scans/{rabbit_id}/{scan_id}.jpg).
+    Uploads a file to MinIO with a user-scoped prefix
+    (e.g. users/{user_id}/avatars/{rabbit_id}.jpg or users/{user_id}/scans/{rabbit_id}/{scan_id}.jpg).
     Returns the relative media path: /media/{object_name}
     """
     ensure_bucket_exists()

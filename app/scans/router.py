@@ -75,7 +75,7 @@ async def process_paw_scan(
     file_bytes = await file.read()
     content_type = file.content_type or "image/jpeg"
     ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
-    object_name = f"scans/{rabbit_id}/{photo_id}.{ext}"
+    object_name = f"users/{current_user.id}/scans/{rabbit_id}/{photo_id}.{ext}"
     media_url = upload_file_to_minio(file_bytes, object_name, content_type=content_type)
 
     # 3. Create Photo record
