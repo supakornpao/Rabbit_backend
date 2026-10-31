@@ -14,6 +14,13 @@ from app.storage import upload_file_to_minio
 
 router = APIRouter(prefix="/scans", tags=["scans"])
 
+def ensure_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
 GRADE_DETAILS = {
     0: {
         "grade_title": "Healthy: Normal Paw",
@@ -120,7 +127,7 @@ async def process_paw_scan(
         risk_level=info["risk_level"],
         explanation=info["explanation"],
         surveillance_period=info["surveillance_period"],
-        analyzed_at=db_result.analyzed_at
+        analyzed_at=ensure_utc(db_result.analyzed_at)
     )
 
 @router.get("/{photo_id}", response_model=scan_schemas.ScanResponse)
@@ -156,7 +163,7 @@ def get_scan_result(
         risk_level=info["risk_level"],
         explanation=info["explanation"],
         surveillance_period=info["surveillance_period"],
-        analyzed_at=result.analyzed_at if result else photo.uploaded_at
+        analyzed_at=ensure_utc(result.analyzed_at if result else photo.uploaded_at)
     )
 
 @router.get("/rabbit/{rabbit_id}", response_model=list[scan_schemas.ScanResponse])
@@ -193,7 +200,7 @@ def get_rabbit_scans(
             risk_level=info["risk_level"],
             explanation=info["explanation"],
             surveillance_period=info["surveillance_period"],
-            analyzed_at=dr.analyzed_at if dr else photo.uploaded_at
+            analyzed_at=ensure_utc(dr.analyzed_at if dr else photo.uploaded_at)
         ))
     return results
 

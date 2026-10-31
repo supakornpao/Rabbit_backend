@@ -13,6 +13,7 @@ import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from app.auth import models
 from app.database import engine
+from sqlalchemy import text
 from app.auth.router import router, get_current_user
 from app.rabbits.router import router as rabbit_router
 from app.scans.router import router as scans_router
@@ -55,6 +56,12 @@ app.include_router(scans_router)
 @app.on_event("startup")
 def startup_event():
     ensure_bucket_exists()
+    with engine.begin() as conn:
+        conn.execute(text("""
+            ALTER TABLE detection_results
+            ALTER COLUMN analyzed_at TYPE TIMESTAMPTZ
+            USING analyzed_at AT TIME ZONE 'UTC';
+        """))
 
 @app.get("/media/{file_path:path}")
 def serve_media(file_path: str):
