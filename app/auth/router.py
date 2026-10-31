@@ -154,3 +154,14 @@ def updateUser(
     db.refresh(current_user)
     return current_user
 
+@router.put("/me/password")
+def update_password(
+    password_data: schemas.PasswordUpdate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not utils.verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    current_user.hashed_password = utils.get_password_hash(password_data.new_password)
+    db.commit()
+    return {"message": "Password updated successfully"}

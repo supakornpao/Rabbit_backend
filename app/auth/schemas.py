@@ -11,6 +11,10 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     username: str
 
+class PasswordUpdate(BaseModel):
+    current_password: str
+    new_password: str
+
 class User(UserBase):
     id: UUID
     username: str | None = None
