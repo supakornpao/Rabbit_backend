@@ -17,7 +17,7 @@ class Photo(Base):
     image_url = Column(String, nullable=False)
     limb = Column(Enum(LimbEnum), nullable=False, default=LimbEnum.back_left)
     status = Column(String(20), nullable=False, default="analyzed")  # pending, processing, analyzed, failed
-    uploaded_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    uploaded_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
     rabbit = relationship("app.rabbits.models.Rabbit", backref="photos")
     detection_result = relationship("DetectionResult", back_populates="photo", uselist=False, cascade="all, delete-orphan")
