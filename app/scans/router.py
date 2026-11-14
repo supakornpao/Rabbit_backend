@@ -1,8 +1,10 @@
 import uuid
 import random
+from io import BytesIO
 from uuid import UUID
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from PIL import Image, ImageOps, UnidentifiedImageError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,6 +22,29 @@ def ensure_utc(dt: datetime | None) -> datetime | None:
     if dt.tzinfo is None:
         return dt.replace(tzinfo=timezone.utc)
     return dt
+
+def crop_image_bytes(file_bytes: bytes, x: float, y: float, w: float, h: float) -> bytes:
+    """Crop an image using normalized (0-1) coordinates and return JPEG bytes."""
+    img = Image.open(BytesIO(file_bytes))
+    try:
+        transposed = ImageOps.exif_transpose(img)
+        if transposed is not None:
+            img = transposed
+    except Exception:
+        pass
+    img = img.convert("RGB")
+    width, height = img.size
+    x = min(max(float(x), 0.0), 1.0)
+    y = min(max(float(y), 0.0), 1.0)
+    w = min(max(float(w), 0.01), 1.0)
+    h = min(max(float(h), 0.01), 1.0)
+    left = min(max(round(x * width), 0), width - 1)
+    top = min(max(round(y * height), 0), height - 1)
+    right = min(max(round((x + w) * width), left + 1), width)
+    bottom = min(max(round((y + h) * height), top + 1), height)
+    out = BytesIO()
+    img.crop((left, top, right, bottom)).save(out, format="JPEG", quality=92)
+    return out.getvalue()
 
 GRADE_DETAILS = {
     0: {
@@ -65,6 +90,10 @@ async def process_paw_scan(
     rabbit_id: UUID = Form(...),
     limb: str = Form("back_left"),
     mock_grade: int | None = Form(None),
+    crop_x: float | None = Form(None),
+    crop_y: float | None = Form(None),
+    crop_w: float | None = Form(None),
+    crop_h: float | None = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: auth_models.User = Depends(get_current_user)
@@ -77,11 +106,20 @@ async def process_paw_scan(
     if not rabbit:
         raise HTTPException(status_code=404, detail="Rabbit not found or does not belong to you")
 
-    # 2. Upload file to MinIO
+    # 2. Upload file to MinIO (cropping first if alignment coordinates are provided)
     photo_id = uuid.uuid4()
     file_bytes = await file.read()
     content_type = file.content_type or "image/jpeg"
     ext = file.filename.split(".")[-1] if file.filename and "." in file.filename else "jpg"
+
+    if all(v is not None for v in (crop_x, crop_y, crop_w, crop_h)):
+        try:
+            file_bytes = crop_image_bytes(file_bytes, crop_x, crop_y, crop_w, crop_h)
+            content_type = "image/jpeg"
+            ext = "jpg"
+        except Exception as e:
+            print(f"Warning: failed to crop scan image ({e}); saving original image.")
+
     object_name = f"users/{current_user.id}/scans/{rabbit_id}/{photo_id}.{ext}"
     media_url = upload_file_to_minio(file_bytes, object_name, content_type=content_type)
 
@@ -99,7 +137,7 @@ async def process_paw_scan(
     db.commit()
 
     # 4. Generate mock detection result (or use requested mock_grade if provided)
-    chosen_classification = mock_grade if mock_grade is not None and 0 <= mock_grade <= 5 else random.choice([1, 2, 3, 4])
+    chosen_classification = mock_grade if mock_grade is not None and 0 <= mock_grade <= 5 else random.choice([0 ,1, 2, 3, 4])
     confidence = round(random.uniform(0.88, 0.98), 2)
 
     db_result = scan_models.DetectionResult(

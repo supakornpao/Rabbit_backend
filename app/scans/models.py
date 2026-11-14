@@ -2,7 +2,7 @@ import uuid
 import enum
 from sqlalchemy import UUID, Column, ForeignKey, Integer, Float, String, DateTime, Enum, func
 from sqlalchemy.dialects.postgresql import TIMESTAMP
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from app.database import Base
 
 class LimbEnum(str, enum.Enum):
@@ -19,7 +19,7 @@ class Photo(Base):
     status = Column(String(20), nullable=False, default="analyzed")  # pending, processing, analyzed, failed
     uploaded_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
-    rabbit = relationship("app.rabbits.models.Rabbit", backref="photos")
+    rabbit = relationship("app.rabbits.models.Rabbit", backref=backref("photos", cascade="all, delete-orphan"))
     detection_result = relationship("DetectionResult", back_populates="photo", uselist=False, cascade="all, delete-orphan")
 
 class DetectionResult(Base):

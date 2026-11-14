@@ -1,0 +1,1088 @@
+{
+  "info": {
+    "_postman_id": "a8f5e2c1-74b9-4d3e-9a12-6c8b0f4e9d21",
+    "name": "RabbitLens Backend API (Runner Suite)",
+    "description": "Automated Postman Collection Runner suite for testing every endpoint in the RabbitLens FastAPI Backend.\n\n### How to Run in Postman Collection Runner\n1. Import `RabbitLens_API.postman_collection.json` into Postman.\n2. For file upload steps (`12. Upload Rabbit Profile Photo`, `13. Process Paw Scan`, `18. Upload File`, `19. Azure ML Predict`), either:\n   - Copy `test_paw.jpg` into your **Postman Working Directory** (Settings -> General -> Working Directory), or\n   - Select `test_paw.jpg` in the Body tab of those requests.\n3. Click **Run collection** -> **Run RabbitLens Backend API (Runner Suite)**.\n\nEvery request includes automated `pm.test()` assertions and chains variables (`access_token`, `refresh_token`, `rabbit_id`, `photo_id`, `media_path`) automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "test_email",
+      "value": "runner@example.com",
+      "type": "string"
+    },
+    {
+      "key": "test_username",
+      "value": "runner_user",
+      "type": "string"
+    },
+    {
+      "key": "test_password",
+      "value": "Password123!",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rabbit_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "photo_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "media_path",
+      "value": "/media/users/example.jpg",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Auth",
+      "description": "Server health check, dynamic user signup, login, token refresh, and profile updates.",
+      "item": [
+        {
+          "name": "01. Health Check (GET /)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns Hello World message', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Hello World');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Verify that the FastAPI server is running."
+          },
+          "response": []
+        },
+        {
+          "name": "02. Signup (POST /auth/signup)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ts = Date.now();",
+                  "pm.collectionVariables.set('test_email', `runner_${ts}@example.com`);",
+                  "pm.collectionVariables.set('test_username', `runner_${ts}`);",
+                  "pm.collectionVariables.set('test_password', 'Password123!');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('User created with matching email and username', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.be.a('string');",
+                  "    pm.expect(jsonData.email).to.eql(pm.collectionVariables.get('test_email'));",
+                  "    pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('test_username'));",
+                  "    pm.expect(jsonData.is_active).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{test_email}}\",\n  \"username\": \"{{test_username}}\",\n  \"password\": \"{{test_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/signup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
+            },
+            "description": "Generates a unique timestamped user and registers a new account."
+          },
+          "response": []
+        },
+        {
+          "name": "03. Login (POST /auth/login)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns access_token and refresh_token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.be.a('string');",
+                  "    pm.expect(jsonData.refresh_token).to.be.a('string');",
+                  "    pm.expect(jsonData.token_type).to.eql('bearer');",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{test_email}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{test_password}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate and save `access_token` and `refresh_token`."
+          },
+          "response": []
+        },
+        {
+          "name": "04. Refresh Token (POST /auth/refresh)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Rotates and saves new tokens', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.be.a('string');",
+                  "    pm.expect(jsonData.refresh_token).to.be.a('string');",
+                  "    pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Exchange `refresh_token` for new tokens."
+          },
+          "response": []
+        },
+        {
+          "name": "05. Get Current User (GET /auth/me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns authenticated user profile', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.email).to.eql(pm.collectionVariables.get('test_email'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Fetch the current user's profile."
+          },
+          "response": []
+        },
+        {
+          "name": "06. Update Username (PUT /auth/me)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const updated = `${pm.collectionVariables.get('test_username')}_edited`;",
+                  "pm.collectionVariables.set('test_username', updated);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Username was updated', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.username).to.eql(pm.collectionVariables.get('test_username'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{test_username}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Update the current user's username."
+          },
+          "response": []
+        },
+        {
+          "name": "07. Change Password (PUT /auth/me/password)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Password updated confirmation message', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Password updated successfully');",
+                  "    pm.collectionVariables.set('test_password', 'NewPassword456!');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"{{test_password}}\",\n  \"new_password\": \"NewPassword456!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/me/password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me",
+                "password"
+              ]
+            },
+            "description": "Change the current user's password."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Rabbits",
+      "description": "Create, list, retrieve, update, and upload photo for a rabbit.",
+      "item": [
+        {
+          "name": "08. Create Rabbit (POST /rabbits/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Creates rabbit and saves rabbit_id', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.be.a('string');",
+                  "    pm.expect(jsonData.name).to.eql('Fluffy');",
+                  "    pm.expect(jsonData.breed).to.eql('Holland Lop');",
+                  "    pm.collectionVariables.set('rabbit_id', jsonData.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fluffy\",\n  \"date_of_birth\": \"2024-05-15\",\n  \"breed\": \"Holland Lop\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rabbits/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                ""
+              ]
+            },
+            "description": "Create a new rabbit profile and save `{{rabbit_id}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "09. Get All My Rabbits (GET /rabbits/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns array containing created rabbit', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array').that.is.not.empty;",
+                  "    const targetId = pm.collectionVariables.get('rabbit_id');",
+                  "    const found = jsonData.some(r => r.id === targetId);",
+                  "    pm.expect(found).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rabbits/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                ""
+              ]
+            },
+            "description": "List all rabbits belonging to the logged-in user."
+          },
+          "response": []
+        },
+        {
+          "name": "10. Get Rabbit Details (GET /rabbits/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns matching rabbit_id', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.id).to.eql(pm.collectionVariables.get('rabbit_id'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rabbits/{{rabbit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                "{{rabbit_id}}"
+              ]
+            },
+            "description": "Get details of the created rabbit."
+          },
+          "response": []
+        },
+        {
+          "name": "11. Update Rabbit (PUT /rabbits/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Rabbit name and breed updated', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.name).to.eql('Fluffy Updated');",
+                  "    pm.expect(jsonData.breed).to.eql('Mini Lop');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fluffy Updated\",\n  \"date_of_birth\": \"2024-05-15\",\n  \"breed\": \"Mini Lop\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rabbits/{{rabbit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                "{{rabbit_id}}"
+              ]
+            },
+            "description": "Update the rabbit's name and breed."
+          },
+          "response": []
+        },
+        {
+          "name": "12. Upload Rabbit Profile Photo (POST /rabbits/:id/photo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Updates image_url on rabbit', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.image_url).to.be.a('string').and.include('/media/users/');",
+                  "    pm.collectionVariables.set('media_path', jsonData.image_url);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "description": "Uses test_paw.jpg in the backend folder",
+                  "type": "file",
+                  "src": "test_paw.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/rabbits/{{rabbit_id}}/photo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                "{{rabbit_id}}",
+                "photo"
+              ]
+            },
+            "description": "Upload a profile photo for the rabbit."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Scans & Media",
+      "description": "Process paw scans, query scan results, stream media from MinIO, and test ML endpoints.",
+      "item": [
+        {
+          "name": "13. Process Paw Scan - Back Left (POST /scans/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns scan report and saves photo_id', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.photo_id).to.be.a('string');",
+                  "    pm.expect(jsonData.rabbit_id).to.eql(pm.collectionVariables.get('rabbit_id'));",
+                  "    pm.expect(jsonData.limb).to.eql('back_left');",
+                  "    pm.expect(jsonData.classification).to.eql(2);",
+                  "    pm.expect(jsonData.grade_title).to.include('Grade II');",
+                  "    pm.collectionVariables.set('photo_id', jsonData.photo_id);",
+                  "    pm.collectionVariables.set('media_path', jsonData.image_url);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "rabbit_id",
+                  "value": "{{rabbit_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "limb",
+                  "value": "back_left",
+                  "type": "text"
+                },
+                {
+                  "key": "mock_grade",
+                  "value": "2",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_paw.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/scans/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "scans",
+                ""
+              ]
+            },
+            "description": "Upload a `back_left` paw scan with `mock_grade=2`."
+          },
+          "response": []
+        },
+        {
+          "name": "14. Process Paw Scan - Back Right (POST /scans/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns back_right scan report', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.limb).to.eql('back_right');",
+                  "    pm.expect(jsonData.classification).to.eql(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "rabbit_id",
+                  "value": "{{rabbit_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "limb",
+                  "value": "back_right",
+                  "type": "text"
+                },
+                {
+                  "key": "mock_grade",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_paw.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/scans/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "scans",
+                ""
+              ]
+            },
+            "description": "Upload a `back_right` paw scan with `mock_grade=1`."
+          },
+          "response": []
+        },
+        {
+          "name": "15. Get Single Scan Result (GET /scans/:photo_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Matches saved photo_id', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.photo_id).to.eql(pm.collectionVariables.get('photo_id'));",
+                  "    pm.expect(jsonData.classification).to.eql(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/scans/{{photo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "scans",
+                "{{photo_id}}"
+              ]
+            },
+            "description": "Fetch a single scan report by `{{photo_id}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "16. Get All Scans for Rabbit (GET /scans/rabbit/:rabbit_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns list of scans for the rabbit', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.be.an('array');",
+                  "    pm.expect(jsonData.length).to.be.at.least(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/scans/rabbit/{{rabbit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "scans",
+                "rabbit",
+                "{{rabbit_id}}"
+              ]
+            },
+            "description": "Retrieve all historical paw scans for `{{rabbit_id}}`."
+          },
+          "response": []
+        },
+        {
+          "name": "17. Stream Media File from MinIO (GET /media/...)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Content-Type is an image', function () {",
+                  "    pm.expect(pm.response.headers.get('Content-Type')).to.include('image');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{media_path}}",
+              "host": [
+                "{{base_url}}{{media_path}}"
+              ]
+            },
+            "description": "Stream the uploaded scan photo from MinIO via `/media/{file_path}`."
+          },
+          "response": []
+        },
+        {
+          "name": "18. Upload File Test (POST /uploadfile/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns uploaded filename', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.filename).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_paw.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/uploadfile/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "uploadfile",
+                ""
+              ]
+            },
+            "description": "Test `/uploadfile/` endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "19. Azure ML Direct Predict (POST /predict/)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "test_paw.jpg"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/predict/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "predict",
+                ""
+              ]
+            },
+            "description": "Send `test_paw.jpg` to the `/predict/` endpoint."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Cleanup & Cascade Verification",
+      "description": "Delete the test rabbit and verify cascade deletion of photos/scans.",
+      "item": [
+        {
+          "name": "20. Delete Rabbit & Cascade Scans (DELETE /rabbits/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Returns deletion confirmation message', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.eql('Rabbit deleted successfully');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rabbits/{{rabbit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                "{{rabbit_id}}"
+              ]
+            },
+            "description": "Deletes the rabbit and verifies that associated photos and detection results cascade-delete cleanly without NotNullViolation."
+          },
+          "response": []
+        },
+        {
+          "name": "21. Verify Rabbit Deleted - Expect 404 (GET /rabbits/:id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/rabbits/{{rabbit_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "rabbits",
+                "{{rabbit_id}}"
+              ]
+            },
+            "description": "Confirm that the deleted rabbit returns 404 Not Found."
+          },
+          "response": []
+        },
+        {
+          "name": "22. Verify Scan Cascade Deleted - Expect 404 (GET /scans/:photo_id)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/scans/{{photo_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "scans",
+                "{{photo_id}}"
+              ]
+            },
+            "description": "Confirm that the rabbit's scan photo was cascade-deleted and returns 404 Not Found."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
