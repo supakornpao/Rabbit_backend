@@ -24,7 +24,7 @@ def ensure_utc(dt: datetime | None) -> datetime | None:
     return dt
 
 def crop_image_bytes(file_bytes: bytes, x: float, y: float, w: float, h: float) -> bytes:
-    """Crop an image using normalized (0-1) coordinates and return JPEG bytes."""
+    """Crop an image using normalized coordinates and return JPEG bytes."""
     img = Image.open(BytesIO(file_bytes))
     try:
         transposed = ImageOps.exif_transpose(img)
@@ -34,14 +34,14 @@ def crop_image_bytes(file_bytes: bytes, x: float, y: float, w: float, h: float) 
         pass
     img = img.convert("RGB")
     width, height = img.size
-    x = min(max(float(x), 0.0), 1.0)
-    y = min(max(float(y), 0.0), 1.0)
-    w = min(max(float(w), 0.01), 1.0)
-    h = min(max(float(h), 0.01), 1.0)
-    left = min(max(round(x * width), 0), width - 1)
-    top = min(max(round(y * height), 0), height - 1)
-    right = min(max(round((x + w) * width), left + 1), width)
-    bottom = min(max(round((y + h) * height), top + 1), height)
+    fx = min(max(float(x), -1.0), 1.0)
+    fy = min(max(float(y), -1.0), 1.0)
+    fw = min(max(float(w), 0.01), 2.5)
+    fh = min(max(float(h), 0.01), 2.5)
+    left = round(fx * width)
+    top = round(fy * height)
+    right = max(round((fx + fw) * width), left + 1)
+    bottom = max(round((fy + fh) * height), top + 1)
     out = BytesIO()
     img.crop((left, top, right, bottom)).save(out, format="JPEG", quality=92)
     return out.getvalue()
